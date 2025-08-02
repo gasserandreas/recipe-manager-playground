@@ -1,13 +1,14 @@
 [project]
-name = "recipe-parser"
+name = "german-recipe-parser"
 version = "0.1.0"
-description = "Recipe web scraper that converts web pages to LLM-friendly markdown"
+description = "German recipe web scraper that converts German recipe pages to LLM-friendly markdown"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "markdownify>=0.11.6",
     "langchain-community>=0.0.20",
     "beautifulsoup4>=4.12.0",
     "lxml>=4.9.0",
-    "aiohttp>=3.8.0"
+    "aiohttp>=3.8.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
 ]
