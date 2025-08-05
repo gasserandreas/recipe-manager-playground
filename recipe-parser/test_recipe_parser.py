@@ -13,11 +13,13 @@ try:
     from .parser import GermanRecipeParser
     from .utils import URLValidator
     from .formatters import GermanTextFormatter, MarkdownFormatter
+    from .main import parse_recipes, parse_recipe, RecipeResult
 except ImportError:
     # Fall back to absolute imports (when run directly)
     from parser import GermanRecipeParser
     from utils import URLValidator
     from formatters import GermanTextFormatter, MarkdownFormatter
+    from main import parse_recipes, parse_recipe, RecipeResult
 
 
 class TestURLValidator:
@@ -140,6 +142,61 @@ class TestGermanRecipeParser:
         # Check that lists are initialized as empty lists
         assert isinstance(recipe_data['ingredients'], list)
         assert isinstance(recipe_data['instructions'], list)
+
+
+class TestBatchProcessing:
+    """Test batch processing functionality."""
+    
+    @pytest.mark.asyncio
+    async def test_parse_recipes_empty_list(self):
+        """Test parsing with empty URL list."""
+        results = await parse_recipes([])
+        assert results == []
+    
+    @pytest.mark.asyncio
+    async def test_parse_recipes_invalid_urls(self):
+        """Test parsing with invalid URLs."""
+        invalid_urls = [
+            "not-a-url",
+            "https://",
+            ""
+        ]
+        
+        results = await parse_recipes(invalid_urls)
+        
+        assert len(results) == len(invalid_urls)
+        for result in results:
+            assert result['success'] is False
+            assert result['error'] is not None
+            assert result['content'] is None
+    
+    @pytest.mark.asyncio
+    async def test_recipe_result_class(self):
+        """Test RecipeResult class functionality."""
+        # Test successful result
+        success_result = RecipeResult(
+            success=True, 
+            content="# Test Recipe", 
+            url="https://example.com"
+        )
+        
+        result_dict = success_result.to_dict()
+        assert result_dict['success'] is True
+        assert result_dict['content'] == "# Test Recipe"
+        assert result_dict['url'] == "https://example.com"
+        assert result_dict['error'] is None
+        
+        # Test failed result
+        fail_result = RecipeResult(
+            success=False,
+            error="Test error",
+            url="https://example.com"
+        )
+        
+        fail_dict = fail_result.to_dict()
+        assert fail_dict['success'] is False
+        assert fail_dict['error'] == "Test error"
+        assert fail_dict['content'] is None
 
 
 # Integration test (requires network access)

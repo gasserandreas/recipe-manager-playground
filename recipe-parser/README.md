@@ -9,7 +9,8 @@ The parser follows a clean, modular architecture for better maintainability and 
 ```
 recipe-parser/
 ├── __init__.py          # Package initialization
-├── main.py              # CLI and convenience functions
+├── main.py              # Batch processing and CLI functions
+├── demo.py              # Demo script with test URLs
 ├── parser.py            # Main orchestrator class
 ├── extractors.py        # JSON-LD and HTML content extractors
 ├── formatters.py        # German text and markdown formatters
@@ -48,19 +49,74 @@ uv sync
 
 ## Usage
 
-### Basic Usage
+### Batch Processing (Recommended)
+
+Process multiple URLs concurrently with detailed error handling:
+
+```python
+import asyncio
+from main import parse_recipes
+
+async def main():
+    urls = [
+        "https://fooby.ch/de/rezepte/27566/sesam-chicken",
+        "https://www.bettybossi.ch/de/rezepte/rezept/veganes-sweet-and-sour-10010271/",
+        "https://invalid-url"  # This will fail gracefully
+    ]
+    
+    results = await parse_recipes(urls)
+    
+    for result in results:
+        if result['success']:
+            print(f"✅ {result['url']}")
+            print(f"Content: {result['content'][:100]}...")
+        else:
+            print(f"❌ {result['url']}")
+            print(f"Error: {result['error']}")
+
+asyncio.run(main())
+```
+
+### Single Recipe Processing
 
 ```python
 import asyncio
 from main import parse_recipe
 
 async def main():
-    url = "https://fooby.ch/de/rezepte/27566/sesam-chicken"
-    markdown_recipe = await parse_recipe(url)
-    if markdown_recipe:
-        print(markdown_recipe)
+    result = await parse_recipe("https://fooby.ch/de/rezepte/27566/sesam-chicken")
+    
+    if result.success:
+        print("✅ Recipe parsed successfully!")
+        print(result.content)
+    else:
+        print(f"❌ Failed: {result.error}")
 
 asyncio.run(main())
+```
+
+### Simple API (Backward Compatibility)
+
+```python
+import asyncio
+from main import parse_recipe_simple
+
+async def main():
+    content = await parse_recipe_simple("https://fooby.ch/de/rezepte/27566/sesam-chicken")
+    if content:
+        print(content)
+    else:
+        print("Failed to parse recipe")
+
+asyncio.run(main())
+```
+
+### Demo and Testing
+
+Run the comprehensive demo:
+
+```bash
+python demo.py
 ```
 
 ### Advanced Usage with Modules
@@ -118,6 +174,47 @@ markdown_output = markdown_formatter.format_recipe(recipe_data, url)
 
 ### `utils.py` - Utilities
 - `URLValidator`: URL validation and domain extraction utilities
+
+## Result Format
+
+### Batch Processing Results
+
+The `parse_recipes()` function returns a list of dictionaries with the following structure:
+
+```python
+{
+    'success': bool,        # True if parsing succeeded
+    'content': str | None,  # Markdown content (if successful)
+    'error': str | None,    # Error message (if failed)
+    'url': str             # Original URL
+}
+```
+
+### Single Recipe Results
+
+The `parse_recipe()` function returns a `RecipeResult` object with:
+
+```python
+result.success  # bool: Whether parsing succeeded
+result.content  # str | None: Markdown content
+result.error    # str | None: Error message
+result.url      # str: Original URL
+```
+
+## Error Handling
+
+The parser provides robust error handling for common issues:
+
+- **Invalid URLs**: Malformed or unreachable URLs
+- **Network errors**: Connection timeouts, DNS failures
+- **Parsing errors**: Missing recipe content, malformed HTML
+- **Concurrent processing**: Errors in one URL don't affect others
+
+All errors are captured and returned with descriptive messages, allowing you to:
+- Identify which URLs failed and why
+- Retry failed URLs if needed
+- Log errors for debugging
+- Continue processing successful results
 
 ## German Output Format
 

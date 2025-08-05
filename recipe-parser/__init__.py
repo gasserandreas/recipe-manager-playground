@@ -10,6 +10,7 @@ from .extractors import JSONLDExtractor, HTMLExtractor
 from .formatters import GermanTextFormatter, MarkdownFormatter
 from .loaders import RecipeContentLoader
 from .utils import URLValidator
+from .main import parse_recipe, parse_recipes, parse_recipe_simple, RecipeResult
 
 __version__ = "0.1.0"
 __author__ = "Recipe Manager Project"
@@ -22,5 +23,9 @@ __all__ = [
     "GermanTextFormatter",
     "MarkdownFormatter",
     "RecipeContentLoader",
-    "URLValidator"
+    "URLValidator",
+    "parse_recipe",
+    "parse_recipes", 
+    "parse_recipe_simple",
+    "RecipeResult"
 ]
