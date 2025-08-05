@@ -1,0 +1,38 @@
+./data
+
+# -------------------------------------------
+# - general gitignore for all submodules
+# -------------------------------------------
+
+# Ignore all .env files in any directory
+**/.env
+# Ignore all .DS_Store files in any directory
+**/.DS_Store
+# Ignore all node_modules directories in any directory
+**/node_modules/
+# Ignore all log files in any directory
+**/*.log
+# Ignore all coverage directories in any directory
+**/coverage/
+# Ignore all dist directories in any directory
+**/dist/
+# Ignore all build directories in any directory
+**/build/
+# Ignore all tmp directories in any directory
+**/tmp/
+# Ignore all .cache directories in any directory
+**/.cache/
+
+# ------
+# - Python specific ignores
+# ------
+# Ignore all __pycache__ directories in any directory
+**/__pycache__/
+# Ignore all .pyc files in any directory
+**/*.pyc
+# Ignore all .pyo files in any directory
+**/*.pyo
+# Ignore all .pyd files in any directory
+**/*.pyd
+# Ignore all virtual environment directories
+**/.venv/
