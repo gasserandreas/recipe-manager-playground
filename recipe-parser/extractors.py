@@ -6,6 +6,7 @@ recipe data from HTML content, including JSON-LD structured data and CSS selecto
 """
 
 import json
+import re
 from typing import Dict, Any, List, Optional, Union
 from bs4 import BeautifulSoup, Tag
 
@@ -159,7 +160,10 @@ class HTMLExtractor:
                 '[itemprop="recipeInstruction"]', '.instruction', '.step', '.schritt',
                 '.instructions li', '.anleitung li', '.zubereitung li',
                 '.recipe-instructions li', '.rezept-anleitung li',
-                '.instructions p', '.anleitung p', '.zubereitung p'
+                '.instructions p', '.anleitung p', '.zubereitung p',
+                # Additional selectors for SwissMilk and similar sites
+                '.preparation-steps li', '.recipe-preparation li',
+                'ol[data-recipe-steps] li', 'ul[data-recipe-steps] li'
             ],
             'prep_time': [
                 '[itemprop="prepTime"]', '.prep-time', '.vorbereitungszeit',
@@ -245,8 +249,90 @@ class HTMLExtractor:
     def _extract_list_field(self, container: Tag, field: str) -> List[str]:
         """Extract a list field (ingredients or instructions)."""
         selectors = self.field_selectors.get(field, [])
+        
+        # Try primary selectors first
         for selector in selectors:
             elems = container.select(selector)
             if elems:
-                return [elem.get_text(strip=True) for elem in elems if elem.get_text(strip=True)]
+                texts = [elem.get_text(strip=True) for elem in elems if elem.get_text(strip=True)]
+                if texts:
+                    return texts
+        
+        # Enhanced fallback for instructions - be more aggressive
+        if field == 'instructions':
+            return self._fallback_instruction_extraction(container)
+        
+        # Enhanced fallback for ingredients
+        if field == 'ingredients':
+            return self._fallback_ingredient_extraction(container)
+            
+        return []
+    
+    def _fallback_instruction_extraction(self, container: Tag) -> List[str]:
+        """More aggressive instruction extraction as fallback."""
+        from bs4 import BeautifulSoup
+        
+        # Try to find ordered or unordered lists with step-like content
+        potential_instruction_lists = container.find_all(['ol', 'ul'])
+        for list_elem in potential_instruction_lists:
+            items = list_elem.find_all('li')
+            if len(items) >= 2:  # Likely instructions if multiple steps
+                texts = []
+                for item in items:
+                    text = item.get_text(strip=True)
+                    # Filter out very short texts that are likely not instructions
+                    # Also check for cooking-related German keywords
+                    if (len(text) > 20 and 
+                        any(word in text.lower() for word in 
+                           ['min', 'grad', 'ofen', 'pfanne', 'topf', 'rühren', 'braten', 
+                            'kochen', 'schneiden', 'mischen', 'würzen', 'erhitzen', 'zutaten',
+                            'aufkochen', 'garen', 'abgiessen', 'abtropfen', 'zugedeckt',
+                            'weich', 'anbraten', 'dünsten', 'salzen', 'würzen']) and
+                        # Exclude navigation or UI elements
+                        not any(ui_word in text.lower() for ui_word in 
+                               ['drucken', 'rezeptbuch', 'einkauf', 'startseite', 'navigation',
+                                'sterne', 'bewertung', 'aktiv', 'gesamt', 'kontakt', 'impressum'])):
+                        texts.append(text)
+                
+                # If we found good instruction texts, return them
+                if len(texts) >= 2:
+                    return texts
+        
+        # Look for numbered paragraphs or divs
+        potential_steps = container.find_all(['p', 'div'], string=re.compile(r'^\d+\.'))
+        if potential_steps:
+            return [step.get_text(strip=True) for step in potential_steps]
+        
+        # Look for paragraphs with cooking-related keywords
+        all_paragraphs = container.find_all('p')
+        instruction_paragraphs = []
+        for p in all_paragraphs:
+            text = p.get_text(strip=True)
+            if (len(text) > 30 and 
+                any(word in text.lower() for word in 
+                    ['erhitzen', 'braten', 'kochen', 'backen', 'rühren', 'mischen', 
+                     'schneiden', 'würzen', 'zugeben', 'servieren', 'anbraten', 'dünsten',
+                     'aufkochen', 'garen', 'abgiessen', 'abtropfen'])):
+                instruction_paragraphs.append(text)
+        
+        return instruction_paragraphs
+    
+    def _fallback_ingredient_extraction(self, container: Tag) -> List[str]:
+        """Enhanced ingredient extraction as fallback."""
+        # Look for any lists that might contain ingredients
+        potential_lists = container.find_all(['ul', 'ol'])
+        for list_elem in potential_lists:
+            items = list_elem.find_all('li')
+            if items:
+                texts = []
+                for item in items:
+                    text = item.get_text(strip=True)
+                    # Check if text looks like an ingredient (has measurements or common words)
+                    if (re.search(r'\d+\s*(g|kg|ml|l|tl|el|stück|stk|prise|bund)', text.lower()) or
+                        any(word in text.lower() for word in 
+                            ['salz', 'pfeffer', 'öl', 'butter', 'zwiebel', 'knoblauch', 'tomat'])):
+                        texts.append(text)
+                if len(texts) >= 3:  # Likely ingredients if multiple items found
+                    return texts
+        
         return []
