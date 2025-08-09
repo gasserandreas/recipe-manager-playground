@@ -1,0 +1,12 @@
+# Core Dependencies
+weaviate-client>=4.6.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+requests>=2.31.0
+
+# Fix protobuf version compatibility
+protobuf>=5.29.0,<6.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
