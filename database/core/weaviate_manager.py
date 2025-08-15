@@ -1,121 +1,37 @@
 """
-Weaviate Database Configuration and Setup (v4 API)
+Weaviate Database Manager
 
-This module provides the database schema definition and client configuration
-for the recipe RAG vector database using Weaviate v4.
+This module provides the manager class for Weaviate database operations
+using v4 API, including connection management and schema operations.
 """
 
-import os
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime
+
+from ..config import WeaviateConfig
+from ..schema import RecipeSchema
 
 logger = logging.getLogger(__name__)
 
 # Try to import weaviate with graceful fallback
 try:
     import weaviate
-    from weaviate.classes.config import Configure, Property, DataType, VectorDistances
-    from weaviate.classes.query import MetadataQuery
     WEAVIATE_AVAILABLE = True
 except ImportError:
     WEAVIATE_AVAILABLE = False
     weaviate = None
-    MetadataQuery = None
-
-
-class WeaviateConfig:
-    """Configuration class for Weaviate database connection and schema."""
-    
-    def __init__(self):
-        self.url = os.getenv('WEAVIATE_URL', 'http://localhost:8080')
-        self.api_key = os.getenv('WEAVIATE_API_KEY', '')
-        self.openai_api_key = os.getenv('OPENAI_APIKEY', '')
-        self.batch_size = int(os.getenv('WEAVIATE_BATCH_SIZE', '100'))
-        self.timeout = int(os.getenv('WEAVIATE_TIMEOUT', '30'))
-        self.recipe_class_name = os.getenv('RECIPE_CLASS_NAME', 'Recipe')
-    
-    def get_client(self):
-        """Create and return a Weaviate client instance."""
-        if not WEAVIATE_AVAILABLE:
-            raise ImportError("weaviate package is required. Install with: pip install weaviate-client")
-        
-        headers = {}
-        if self.openai_api_key:
-            headers["X-OpenAI-Api-Key"] = self.openai_api_key
-        
-        # Extract host and port from URL
-        url_parts = self.url.replace('http://', '').replace('https://', '')
-        if ':' in url_parts:
-            host, port = url_parts.split(':')
-            port = int(port)
-        else:
-            host = url_parts
-            port = 8080
-        
-        # Use Weaviate v4 client connection
-        if self.api_key:
-            client = weaviate.connect_to_local(
-                host=host,
-                port=port,
-                headers=headers,
-                auth_credentials=weaviate.auth.AuthApiKey(self.api_key)
-            )
-        else:
-            client = weaviate.connect_to_local(
-                host=host,
-                port=port,
-                headers=headers
-            )
-        
-        return client
-
-
-class RecipeSchema:
-    """Schema definition for recipe documents in Weaviate using v4 API."""
-    
-    @staticmethod
-    def get_collection_config():
-        """
-        Get the vector configuration for Recipe objects using v4 API.
-        
-        Returns:
-            Vector configuration for Weaviate v4
-        """
-        return Configure.VectorIndex.hnsw(
-            distance_metric=VectorDistances.COSINE
-        )
-    
-    @staticmethod
-    def get_vectorizer_config():
-        """Get the vectorizer configuration for Recipe collection."""
-        return Configure.Vectorizer.text2vec_openai(
-            model="text-embedding-3-small"
-        )
-    
-    @staticmethod
-    def get_properties():
-        """Get the properties configuration for Recipe collection."""
-        return [
-            Property(name="title", data_type=DataType.TEXT, description="The title/name of the recipe"),
-            Property(name="source", data_type=DataType.TEXT, description="The original URL or source of the recipe"),
-            Property(name="cuisine", data_type=DataType.TEXT, description="The cuisine type (e.g., italienisch, deutsch, asiatisch)"),
-            Property(name="prep_time", data_type=DataType.TEXT, description="Preparation time for the recipe"),
-            Property(name="cook_time", data_type=DataType.TEXT, description="Cooking time for the recipe"),
-            Property(name="servings", data_type=DataType.TEXT, description="Number of servings"),
-            Property(name="ingredients", data_type=DataType.TEXT, description="Recipe ingredients"),
-            Property(name="instructions", data_type=DataType.TEXT, description="Step-by-step cooking instructions"),
-            Property(name="tags", data_type=DataType.TEXT_ARRAY, description="Recipe tags"),
-            Property(name="content", data_type=DataType.TEXT, description="Full recipe content"),
-            Property(name="created_at", data_type=DataType.DATE, description="Creation timestamp"),
-            Property(name="updated_at", data_type=DataType.DATE, description="Last update timestamp"),
-        ]
 
 
 class WeaviateManager:
     """Manager class for Weaviate database operations using v4 API."""
     
     def __init__(self, config: Optional[WeaviateConfig] = None):
+        """
+        Initialize the Weaviate manager.
+        
+        Args:
+            config: Optional Weaviate configuration
+        """
         self.config = config or WeaviateConfig()
         self.client = None
     

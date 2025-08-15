@@ -1,15 +1,17 @@
 """
-Weaviate Database Client for Recipe RAG System (v4 API)
+Recipe Vector Database Client
 
 This module provides high-level operations for storing, retrieving,
 and searching recipes in the Weaviate vector database using v4 API.
 """
 
-import os
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timezone
 import logging
-from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+
+from ..config import WeaviateConfig
+from ..models import RecipeDocument
+from .weaviate_manager import WeaviateManager
 
 logger = logging.getLogger(__name__)
 
@@ -22,49 +24,6 @@ except ImportError:
     weaviate = None
     MetadataQuery = None
     WEAVIATE_AVAILABLE = False
-
-try:
-    from .config import WeaviateManager, WeaviateConfig
-except ImportError:
-    # Fallback for direct execution
-    from config import WeaviateManager, WeaviateConfig
-
-
-@dataclass
-class RecipeDocument:
-    """Data class representing a recipe document."""
-    title: str
-    source: str
-    cuisine: str
-    content: str
-    ingredients: str = ""
-    instructions: str = ""
-    prep_time: str = ""
-    cook_time: str = ""
-    servings: str = ""
-    tags: Optional[List[str]] = None
-    
-    def __post_init__(self):
-        if self.tags is None:
-            self.tags = []
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the recipe document to a dictionary for Weaviate."""
-        now = datetime.now().replace(tzinfo=timezone.utc)
-        return {
-            "title": self.title,
-            "source": self.source,
-            "cuisine": self.cuisine,
-            "content": self.content,
-            "ingredients": self.ingredients,
-            "instructions": self.instructions,
-            "prep_time": self.prep_time,
-            "cook_time": self.cook_time,
-            "servings": self.servings,
-            "tags": self.tags,
-            "created_at": now,
-            "updated_at": now
-        }
 
 
 class RecipeVectorDatabase:
@@ -195,6 +154,9 @@ class RecipeVectorDatabase:
         try:
             if self._collection is None:
                 raise Exception("Not connected to database")
+            
+            if not WEAVIATE_AVAILABLE:
+                raise ImportError("weaviate package is required for search operations")
             
             # Perform vector search using v4 API
             response = self._collection.query.near_text(
@@ -361,43 +323,3 @@ class RecipeVectorDatabase:
         except Exception as e:
             logger.error(f"Failed to update recipe {uuid}: {e}")
             return False
-
-
-def main():
-    """Example usage of the RecipeVectorDatabase."""
-    logging.basicConfig(level=logging.INFO)
-    
-    # Example recipe
-    recipe = RecipeDocument(
-        title="Spaghetti Carbonara",
-        source="https://example.com/carbonara",
-        cuisine="Italian",
-        content="Classic Italian pasta dish with eggs, cheese, and pancetta.",
-        ingredients="400g spaghetti, 4 eggs, 100g pancetta, 100g Parmesan cheese",
-        instructions="1. Cook pasta. 2. Fry pancetta. 3. Mix eggs and cheese. 4. Combine all.",
-        prep_time="10 minutes",
-        cook_time="15 minutes",
-        servings="4",
-        tags=["pasta", "italian", "quick"]
-    )
-    
-    try:
-        with RecipeVectorDatabase() as db:
-            # Add a recipe
-            uuid = db.add_recipe(recipe)
-            print(f"Added recipe with UUID: {uuid}")
-            
-            # Search for recipes
-            results = db.search_recipes("Italian pasta recipes", limit=5)
-            print(f"Found {len(results)} recipes")
-            
-            # Count recipes
-            count = db.count_recipes()
-            print(f"Total recipes in database: {count}")
-            
-    except Exception as e:
-        logger.error(f"Error in main: {e}")
-
-
-if __name__ == "__main__":
-    main()
