@@ -16,24 +16,36 @@ def test_imports():
     print("🧪 Testing module imports...")
     
     try:
-        from config import WeaviateConfig, WeaviateManager, RecipeSchema
-        print("✅ config module imported successfully")
+        import sys
+        sys.path.append('.')
+        from config import WeaviateConfig, DatabaseSettings
+        from schema import RecipeSchema
+        from core import WeaviateManager
+        print("✅ config, schema, and core modules imported successfully")
     except Exception as e:
-        print(f"❌ Failed to import config: {e}")
+        print(f"❌ Failed to import config/schema/core: {e}")
         return False
     
     try:
-        from client import RecipeVectorDatabase, RecipeDocument
-        print("✅ client module imported successfully")
+        from models import RecipeDocument
+        from core import RecipeVectorDatabase
+        print("✅ models and core modules imported successfully")
     except Exception as e:
-        print(f"❌ Failed to import client: {e}")
+        print(f"❌ Failed to import models/core: {e}")
         return False
     
     try:
-        from loader import RecipeDataLoader, MarkdownRecipeParser
-        print("✅ loader module imported successfully")
+        from loaders import RecipeDataLoader, MarkdownRecipeParser
+        print("✅ loaders module imported successfully")
     except Exception as e:
-        print(f"❌ Failed to import loader: {e}")
+        print(f"❌ Failed to import loaders: {e}")
+        return False
+    
+    try:
+        from utils import setup_logging, get_logger
+        print("✅ utils module imported successfully")
+    except Exception as e:
+        print(f"❌ Failed to import utils: {e}")
         return False
     
     return True
@@ -69,7 +81,7 @@ def test_recipe_document():
     print("\n🧪 Testing recipe document creation...")
     
     try:
-        from client import RecipeDocument
+        from models import RecipeDocument
         recipe = RecipeDocument(
             title="Test Recipe",
             source="test://example.com",
@@ -91,7 +103,7 @@ def test_markdown_parser():
     print("\n🧪 Testing markdown parser...")
     
     try:
-        from loader import MarkdownRecipeParser
+        from loaders import MarkdownRecipeParser
         parser = MarkdownRecipeParser()
         
         # Test frontmatter parsing
@@ -119,6 +131,31 @@ cuisine: "test"
         print(f"❌ Failed to test markdown parser: {e}")
         return False
 
+def test_package_imports():
+    """Test package-level imports."""
+    print("\n🧪 Testing package-level imports...")
+    
+    try:
+        import sys
+        import os
+        # Add parent directory to path to import database as a package
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sys.path.insert(0, parent_dir)
+        
+        import database
+        from database import (
+            WeaviateConfig, 
+            RecipeDocument, 
+            RecipeDataLoader,
+            setup_logging
+        )
+        print("✅ Package-level imports working")
+        print(f"   Database version: {database.__version__}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to test package imports: {e}")
+        return False
+
 def main():
     """Run all tests."""
     print("🔬 Running database module tests...\n")
@@ -128,7 +165,8 @@ def main():
         test_weaviate_dependency,
         test_config_creation,
         test_recipe_document,
-        test_markdown_parser
+        test_markdown_parser,
+        test_package_imports
     ]
     
     passed = 0

@@ -35,7 +35,7 @@ def check_dependencies():
 def setup_database_schema():
     """Set up the database schema."""
     try:
-        from config import setup_database
+        from core import setup_database
         print("🔧 Setting up database schema...")
         manager = setup_database()
         print("✅ Database schema setup completed!")
@@ -48,7 +48,7 @@ def setup_database_schema():
 def load_sample_data(recipes_dir, batch_size=10):
     """Load sample recipe data."""
     try:
-        from loader import RecipeDataLoader
+        from loaders import RecipeDataLoader
         print(f"📚 Loading sample recipes from: {recipes_dir}")
         loader = RecipeDataLoader()
         stats = loader.load_recipes_from_directory(recipes_dir, batch_size=batch_size)
@@ -70,7 +70,7 @@ def load_sample_data(recipes_dir, batch_size=10):
 def check_database_health():
     """Check database health and connection."""
     try:
-        from config import WeaviateManager
+        from core import WeaviateManager
         print("🔍 Checking database health...")
         
         manager = WeaviateManager()
@@ -92,7 +92,7 @@ def check_database_health():
 def count_recipes():
     """Count recipes in the database."""
     try:
-        from client import RecipeVectorDatabase
+        from core import RecipeVectorDatabase
         print("📊 Counting recipes in database...")
         
         with RecipeVectorDatabase() as db:
